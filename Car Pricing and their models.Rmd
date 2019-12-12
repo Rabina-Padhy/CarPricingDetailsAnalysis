@@ -1,0 +1,560 @@
+---
+title: Car Pricing
+affiliation:
+  ## use one only of the following
+  # author-columnar: true         ## one column per author
+  institution-columnar: true  ## one column per institution (multiple autors eventually)
+  # wide: true                  ## one column wide author/affiliation fields
+  institution:
+    - name: Western Sydney University
+      department: School of Computing, Engineering and Mathmatics
+      location: Sydney
+      email: ece@datech.edu
+      mark: 1
+      author:
+        - name: Rabina Padhy
+   
+bibliography: mybibfile.bib
+output: rticles::ieee_article
+
+---
+XII APPENDIX
+============
+packaging
+
+```{r }
+library(readr)
+library(lattice)
+library(tibble)
+library(DAAG)
+library(e1071)
+```
+
+```{r load, eval=TRUE, echo=FALSE}
+data1 <- read.csv("car1.csv")
+dim(data1)
+```
+
+CleanProcess
+
+```{r carDetailsDataset}
+carDetails <- subset(data1, data1$HorsePower>0)
+dim(carDetails)
+```
+
+Classification
+\tiny
+```{r classification}
+sapply(carDetails, class)
+```
+\normalsize
+
+```{r dim}
+dim(carDetails)
+```
+
+
+
+Converting FuelType to FuelTypeCode
+\tiny
+```{r FuelTypeCode}
+FuelTypeCode = carDetails$FuelType
+levels(FuelTypeCode)
+levels(FuelTypeCode)[levels(FuelTypeCode)=="diesel"]=0
+levels(FuelTypeCode)[levels(FuelTypeCode)=="gas"]=1
+levels(FuelTypeCode)
+FuelTypeCode = as.numeric(levels(FuelTypeCode))[FuelTypeCode]
+class(FuelTypeCode)
+table(FuelTypeCode)
+```
+\normalsize
+
+COnverting Make to MakeCode
+\tiny
+```{r MakeCode}
+MakeCode = carDetails$Make
+levels(MakeCode)
+levels(MakeCode)[levels(MakeCode)=="alfa"]=1
+levels(MakeCode)[levels(MakeCode)=="audi"]=2
+levels(MakeCode)[levels(MakeCode)=="bmw"]=3
+levels(MakeCode)[levels(MakeCode)=="chevrolet"]=4
+levels(MakeCode)[levels(MakeCode)=="dodge"]=5
+levels(MakeCode)[levels(MakeCode)=="honda"]=6
+levels(MakeCode)[levels(MakeCode)=="isuzu"]=7
+levels(MakeCode)[levels(MakeCode)=="jaguar"]=8
+levels(MakeCode)[levels(MakeCode)=="mazda"]=9
+levels(MakeCode)[levels(MakeCode)=="mercedes-benz"]=10
+levels(MakeCode)[levels(MakeCode)=="mercury"]=11
+levels(MakeCode)[levels(MakeCode)=="mitsubishi"]=12
+levels(MakeCode)[levels(MakeCode)=="nissan"]=13
+levels(MakeCode)[levels(MakeCode)=="peugot"]=14
+levels(MakeCode)[levels(MakeCode)=="plymouth"]=15
+levels(MakeCode)[levels(MakeCode)=="porsche"]=16
+levels(MakeCode)[levels(MakeCode)=="renault"]=17
+levels(MakeCode)[levels(MakeCode)=="saab"]=18
+levels(MakeCode)[levels(MakeCode)=="subaru"]=19
+levels(MakeCode)[levels(MakeCode)=="toyota"]=20
+levels(MakeCode)[levels(MakeCode)=="volkswagen"]=21
+levels(MakeCode)[levels(MakeCode)=="volvo"]=22
+
+levels(MakeCode)
+
+table(MakeCode)
+MakeCode = as.numeric(MakeCode)
+class(MakeCode)
+
+```
+\normalsize
+
+Reformat Dataset
+
+\tiny
+```{r reformat}
+carDetails <- add_column(carDetails, MakeCode,FuelTypeCode, .after = 1)
+carDetails = carDetails[,-1]
+carDetails = carDetails[,-3]
+head(carDetails)
+set.seed(9001)
+train<-sample(1:nrow(carDetails),150)
+
+head(train)
+CarDetrailstrain=carDetails[train, ]
+dim(CarDetrailstrain)
+```
+\normalsize
+
+Linear Model
+
+\tiny
+```{r LinearSummary}
+LinearModel = lm(Price~EngineSize, data = carDetails, subset = train)
+summary(LinearModel)
+```
+\normalsize
+
+
+\tiny
+```{r ConfidentIntervalpfLinear}
+confint(LinearModel)
+```
+\normalsize
+
+
+Linear Model Anova
+\tiny
+```{r LinearAnova}
+anova(LinearModel)
+
+plot(Price~EngineSize, data = carDetails, xlab="EngineSize in Cubic Inches",ylab = "Price in thousands of Australian Dollar", main="Price Vs EngineSize", col = "red", pch = 20)
+abline(a= -6.76, b=0.156, col = "green", lwd = 2)
+legend(100, 45, legend=c("Observation", "Linear"),
+       col=c("red", "green"), c( 2, 3),cex=0.8)
+```
+\normalsize
+
+
+PolyNomial Model
+\tiny
+```{r}
+polyModel1=lm(Price~poly(CurbWeight,3), data = carDetails, subset = train) 
+summary(polyModel1)
+anova(polyModel1)
+plot(Price~CurbWeight, data = CarDetrailstrain, xlab="CurbWeight in grams",ylab = "Price in thousands of Austalian Dollar", main="Price Vs CurbWeight", col = "red", pch = 20)
+lines(smooth.spline(CarDetrailstrain$CurbWeight, predict(polyModel1)), col= "blue",lwd=2, lty=2,pch=10, type = "b")
+legend(1500,40, legend=c("observation","Polynomial"), col=c("red","blue"), pch = c(20, 10),cex=0.8)
+
+```
+\normalsize
+
+
+Interaction Model
+\tiny
+```{r}
+InteractionModel = lm(Price~Width+CurbWeight+Width*CurbWeight, data = carDetails, subset = train)
+summary(InteractionModel)
+anova(InteractionModel)
+plot(Price~CurbWeight, data = CarDetrailstrain,xlab="CurbWeight in grams",ylab = "Price in thousands of Austalian Dollar", main="Price Vs CurbWeight", col = "red", pch = 20)
+lines(smooth.spline(CarDetrailstrain$CurbWeight,predict(InteractionModel)), col= "orange",lwd=3, pch=10, type = "b")
+lines(smooth.spline(CarDetrailstrain$CurbWeight, predict(polyModel1)), col= "blue",lwd=2, lty=2,pch=15, type = "b")
+legend(1500,40, legend=c("observation","Interaction", "polynomial"), col=c("red","orange", "blue"), pch = c(20, 10, 15),cex=0.8)
+
+```
+\normalsize
+
+
+
+MultiLinear Model Summary
+
+\tiny
+```{r MultiLinearModel}
+MultiLinearModel = lm(Price~EngineSize+CurbWeight+Width+MPG , data = carDetails, subset = train)
+summary(MultiLinearModel)
+anova(MultiLinearModel)
+plot(Price~EngineSize, data = CarDetrailstrain, xlab="EngineSize in Cubic Inches",ylab = "Price in thousands of Australian Dollar", main="Price Vs EngineSize", col = "red", pch = 20)
+abline(a= -6.385, b=0.152, col = "green", lwd = 2)
+lines(smooth.spline(CarDetrailstrain$EngineSize, predict(MultiLinearModel)), col= "blue",lwd=2, lty=2,pch=15, type = "b")
+legend(100, 45, legend=c("Observation", "Linear", "MultipleLinear"),
+       col=c("red", "green", "blue"), c( 2, 3, 4),cex=0.8)
+```
+\normalsize
+
+Hybrid Model
+\tiny
+```{r }
+selectModel = lm(Price~EngineSize+Width+CurbWeight+Width*CurbWeight+I(CurbWeight*CurbWeight) , data = carDetails, subset = train)
+summary(selectModel)
+
+anova(selectModel)
+par(mfrow=c(2,2))
+plot(selectModel)
+
+```
+\normalsize
+
+Crossvaidation
+\tiny
+```{r}
+dim(carDetails[-train,])
+
+carDetailstest <- carDetails[-train,]
+carDetailstest <- rbind(carDetailstest, carDetails[-train,])
+carDetailstest <- rbind(carDetailstest, carDetails[-train,])
+
+dim(carDetailstest)
+
+cv.lm(data = carDetailstest, selectModel, m= 10)
+```
+\normalsize
+
+
+Claasification
+```{r}
+data2<- sample(1: nrow(carDetails), 200)
+carDetailsClass <- carDetails[data2,]
+dim(carDetailsClass)
+```
+
+Price to HighPrice
+
+\tiny
+```{r eval=TRUE}
+
+HighPrice = ifelse(carDetailsClass$Price <= 13.17, "No", "Yes")
+
+HighPrice <- factor(HighPrice)
+carDetailsClass <- add_column(carDetailsClass, HighPrice, .after = 15)
+
+HighPriceCode = carDetailsClass$HighPrice
+levels(HighPriceCode)
+table(HighPriceCode)
+table(HighPrice)
+levels(HighPriceCode)[levels(HighPriceCode)=="No"]=0
+levels(HighPriceCode)[levels(HighPriceCode)=="Yes"]=1
+levels(HighPriceCode)
+HighPriceCode <- as.numeric(levels(HighPriceCode))[HighPriceCode]
+table(HighPriceCode)
+```
+\normalsize
+
+Reformat Data
+\tiny
+```{r}
+head(carDetailsClass)
+carDetailsClass <- add_column(carDetailsClass, HighPriceCode, .after = 15)
+carDetailsClass = carDetailsClass[,-17]
+
+head(carDetailsClass)
+colnames(carDetailsClass)
+```
+\normalsize
+
+Get Train and Test
+\tiny
+```{r}
+set.seed(9003)
+trainClass<-sample(1:nrow(carDetailsClass),100)
+testClass<-carDetailsClass[-trainClass,]
+
+HighPrice.train=HighPrice[trainClass]
+HighPrice.test=HighPrice[-trainClass]
+
+carDetailsClassTrain <- carDetailsClass[trainClass,]
+dim(carDetailsClassTrain)
+head(carDetailsClassTrain)
+carDetailsClassTest <- testClass
+dim(carDetailsClassTest)
+
+```
+\normalsize
+
+Linear Logistic Model
+\tiny
+```{r}
+LinearLogisticMod=glm(HighPriceCode~EngineSize, data = carDetailsClassTrain, family=binomial)
+summary.glm(LinearLogisticMod)
+
+
+```
+\normalsize
+
+Training dataset linear
+```{r}
+glm_prob<-predict(LinearLogisticMod, type="response")
+
+glm_pred<- rep("No", 100)
+glm_pred[glm_prob>0.5]="Yes"
+
+table(glm_pred,HighPrice.train)
+
+table(glm_pred,HighPrice.test)
+```
+
+polylogstic model
+\tiny
+```{r}
+PolyLogisticMod=glm(HighPriceCode~poly(EngineSize,3), data = carDetailsClassTrain, family=binomial)
+summary.glm(PolyLogisticMod)
+glm_prob1<-predict(PolyLogisticMod, type="response")
+
+glm_pred1<- rep("No", 100)
+glm_pred1[glm_prob1>0.5]="Yes"
+
+table(glm_pred1,HighPrice.train)
+
+table(glm_pred1,HighPrice.test)
+```
+\normalsize
+
+interaction logistic model
+\tiny
+```{r}
+InteractionLogisticMod=glm(HighPriceCode~Width+CurbWeight+Width*CurbWeight, data = carDetailsClassTrain, family=binomial)
+summary.glm(InteractionLogisticMod)
+glm_prob2<-predict(PolyLogisticMod, type="response")
+
+glm_pred2<- rep("No", 100)
+glm_pred2[glm_prob2>0.5]="Yes"
+
+table(glm_pred2,HighPrice.train)
+
+table(glm_pred2,HighPrice.test)
+```
+\normalsize
+
+Multilinear logistic model
+\tiny
+```{r}
+MultiLogisticMod=glm(HighPriceCode~EngineSize+CurbWeight+Width+MPG, data = carDetailsClassTrain, family=binomial)
+summary.glm(MultiLogisticMod)
+glm_prob3<-predict(MultiLogisticMod, type="response")
+
+glm_pred3<- rep("No", 100)
+glm_pred3[glm_prob3>0.5]="Yes"
+
+table(glm_pred3,HighPrice.train)
+
+table(glm_pred3,HighPrice.test)
+```
+\normalsize
+
+Selection model
+\tiny
+```{r}
+HybridlogicModel = glm(HighPriceCode~EngineSize+MPG, data = carDetailsClassTrain, family=binomial)
+summary.glm(HybridlogicModel)
+
+glm_prob4<-predict(HybridlogicModel, type="response")
+
+glm_pred4<- rep("No", 100)
+glm_pred4[glm_prob4>0.5]="Yes"
+
+table(glm_pred4,HighPrice.train)
+
+table(glm_pred4,HighPrice.test)
+
+anova(HybridlogicModel)
+```
+\normalsize
+
+
+PCA
+\tiny
+```{r}
+par(mfrow=c(3,2))
+plot(WheelBase~Length, data=carDetailsClass,
+     col=unclass(HighPrice)+1, pch=16)
+plot(Width~CurbWeight, data=carDetailsClass,
+     col=unclass(HighPrice)+1, pch=16)
+plot(EngineSize~HorsePower, data=carDetailsClass,
+     col=unclass(HighPrice)+1, pch=16)
+plot(Bore~Stroke, data=carDetailsClass,
+     col=unclass(HighPrice)+1, pch=16)
+plot(CompressionRatio~MPG, data=carDetailsClass,
+     col=unclass(HighPrice)+1, pch=16)
+plot(PeakRPM~Height, data=carDetailsClass,
+     col=unclass(HighPrice)+1, pch=16)
+```
+\normalsize
+
+Reformat dataset
+\tiny
+```{r}
+View(carDetailsClass)
+carDetailsClass = carDetailsClass[,-8]
+
+carDetailsClass_new <- carDetailsClass[,3:5]
+
+carDetailsClass_new <- cbind(carDetailsClass_new, carDetailsClass[,7])
+carDetailsClass_new <- cbind(carDetailsClass_new, carDetailsClass[,8])
+head(carDetailsClass_new)
+carDetailsClass_new <- cbind(carDetailsClass_new, carDetailsClass[,12])
+carDetailsClass_new <- cbind(carDetailsClass_new, carDetailsClass[,9:10])
+carDetailsClass_new <- cbind(carDetailsClass_new, carDetailsClass[,11])
+carDetailsClass_new <- cbind(carDetailsClass_new, carDetailsClass[,14])
+carDetailsClass_new <- cbind(carDetailsClass_new, carDetailsClass[,13])
+carDetailsClass_new <- cbind(carDetailsClass_new, carDetailsClass[,6])
+carDetailsClass_new <- cbind(carDetailsClass_new, carDetailsClass[,16])
+
+colnames(carDetailsClass_new) <- c("WheelBase", "Length", "Width",
+                                  "CurbWeight", "EngineSize", "HorsePower" ,
+                                 "Bore", "Stroke", "CompressionRatio","MPG",
+                                 "PeakRPM", "Height", "HighPrice")
+```
+\normalsize
+
+PCA Perform
+\tiny
+```{r}
+carDetailsClass_new <- subset(carDetailsClass_new, carDetailsClass_new$Bore>0)
+View(carDetailsClass_new)
+obj3 = prcomp(carDetailsClass_new[,1:12]) # perform PCA
+par(mfrow=c(3,2))
+obj3 = prcomp(carDetailsClass_new[,1:12]) # perform PCA
+plot(obj3$x[,1:2], col=unclass(carDetailsClass_new$HighPrice)+1,pch=16, asp=1)
+plot(obj3$x[,3:4], col=unclass(carDetailsClass_new$HighPrice)+1,pch=16, asp=1)
+plot(obj3$x[,5:6], col=unclass(carDetailsClass_new$HighPrice)+1,pch=16, asp=1)
+plot(obj3$x[,7:8], col=unclass(carDetailsClass_new$HighPrice)+1,pch=16, asp=1)
+plot(obj3$x[,9:10], col=unclass(carDetailsClass_new$HighPrice)+1,pch=16, asp=1)
+plot(obj3$x[,11:12], col=unclass(carDetailsClass_new$HighPrice)+1,pch=16, asp=1)
+
+par(mfrow=c(1,1))
+biplot(obj3, cex= 0.5, main = "Variance of Car Details")
+summary(obj3)
+obj3$center
+obj3$sdev
+screeplot(obj3, main = "Variance of Car Details")
+obj3$sdev
+pr.var3 = obj3$sdev^2
+pr.var3
+pve3 = pr.var3/sum(pr.var3)
+pve3
+
+par(mfrow=c(1,2))
+plot(pve3,xlab="Principal Component",ylab="Proportion of Variance Explained",
+     ylim = c(0,1), type = 'b')
+
+plot(cumsum(pve3),xlab="Principal Component",ylab="Cumulative Proportion of Variance Explained",
+     ylim = c(0,1), type = 'b')
+```
+\normalsize
+
+Different models
+
+Toyota
+\tiny
+```{r}
+ToyotaCarDetails <- subset(carDetails, carDetails$MakeCode==20)
+dim(ToyotaCarDetails)
+
+ToyotaselectModel = lm(Price~EngineSize+Width+CurbWeight+Width*CurbWeight+I(CurbWeight*CurbWeight) , data = ToyotaCarDetails)
+summary(ToyotaselectModel)
+anova(ToyotaselectModel)
+```
+\normalsize
+
+Nissan
+\tiny
+```{r}
+NissanCarDetails <- subset(carDetails, carDetails$MakeCode==13)
+dim(NissanCarDetails)
+NissanselectModel = lm(Price~EngineSize+Width+CurbWeight+Width*CurbWeight+I(CurbWeight*CurbWeight) , data = NissanCarDetails)
+summary(NissanselectModel)
+anova(NissanselectModel)
+```
+\normalsize
+
+\tiny
+```{r}
+MitsubishiCarDetails <- subset(carDetails, carDetails$MakeCode==12)
+dim(MitsubishiCarDetails)
+
+MitsubishiselectModel = lm(Price~EngineSize+Width+CurbWeight+Width*CurbWeight+I(CurbWeight*CurbWeight) , data = MitsubishiCarDetails)
+summary(MitsubishiselectModel)
+anova(MitsubishiselectModel)
+```
+\normalsize
+
+comepare
+\tiny
+```{r}
+par(mfrow=c(1,3))
+
+plot(Price~EngineSize, data = ToyotaCarDetails, xlab="EngineSize in Cubic Inches",ylab = "Price in thousands of Austalian Dollar", main="Price Vs EngineSize", col = "blue", pch = 20)
+lines(smooth.spline(ToyotaCarDetails$EngineSize,predict(ToyotaselectModel)), col= "blue",lwd=2, lty=1)
+par(new = TRUE)
+plot(Price~EngineSize, data = NissanCarDetails, xlab="EngineSize in Cubic Inches",ylab = "Price in thousands of Austalian Dollar", main="Price Vs EngineSize", col = "green", pch = 20)
+lines(smooth.spline(NissanCarDetails$EngineSize,predict(NissanselectModel)), col= "green",lwd=2, lty=1)
+par(new = TRUE)
+plot(Price~EngineSize, data = MitsubishiCarDetails, xlab="EngineSize in Cubic Inches",ylab = "Price in thousands of Austalian Dollar", main="Price Vs EngineSize", col = "red", pch = 20)
+lines(smooth.spline(MitsubishiCarDetails$EngineSize,predict(MitsubishiselectModel)), col= "red",lwd=2, lty=1)
+legend(100, 14, legend=c("Totota", "Nissan", "Mitsubishi"),col=c("green", "blue", "red"), c( 3, 4, 2), cex=0.8)
+
+
+
+plot(Price~CurbWeight, data = ToyotaCarDetails, xlab="CurbWeight in grams",ylab = "Price in thousands of Austalian Dollar", main="Price Vs CurbWeight", col = "blue", pch = 20)
+lines(smooth.spline(ToyotaCarDetails$CurbWeight,predict(ToyotaselectModel)), col= "blue",lwd=2, lty=1)
+par(new = TRUE)
+plot(Price~CurbWeight, data = NissanCarDetails, xlab="CurbWeight in gramss",ylab = "Price in thousands of Austalian Dollar", main="Price Vs CurbWeight", col = "green", pch = 20)
+lines(smooth.spline(NissanCarDetails$CurbWeight,predict(NissanselectModel)), col= "green",lwd=2, lty=1)
+par(new = TRUE)
+plot(Price~CurbWeight, data = MitsubishiCarDetails, xlab="CurbWeight in grams",ylab = "Price in thousands of Austalian Dollar", main="Price Vs CurbWeight", col = "red", pch = 20)
+lines(smooth.spline(MitsubishiCarDetails$CurbWeight,predict(MitsubishiselectModel)), col= "red",lwd=2, lty=1)
+legend(2000, 14, legend=c("Totota", "Nissan", "Mitsubishi"),col=c("green", "blue", "red"), c( 3, 4, 2), cex=0.5)
+
+plot(Price~Width, data = ToyotaCarDetails, xlab="Width in centimeter",ylab = "Price in thousands of Austalian Dollar", main="Price Vs Width", col = "blue", pch = 20)
+lines(smooth.spline(ToyotaCarDetails$Width,predict(ToyotaselectModel)), col= "blue",lwd=2, lty=1)
+par(new = TRUE)
+plot(Price~Width, data = NissanCarDetails, xlab="Width in centimeter",ylab = "Price in thousands of Austalian Dollar", main="Price Vs Width", col = "green", pch = 20)
+lines(smooth.spline(NissanCarDetails$Width,predict(NissanselectModel)), col= "green",lwd=2, lty=1)
+par(new = TRUE)
+plot(Price~Width, data = MitsubishiCarDetails, xlab="Width in centimeter",ylab = "Price in thousands of Austalian Dollar", main="Price Vs Width", col = "red", pch = 20)
+lines(smooth.spline(MitsubishiCarDetails$Width,predict(MitsubishiselectModel)), col= "red",lwd=2, lty=1)
+legend(65, 14, legend=c("Totota", "Nissan", "Mitsubishi"),col=c("green", "blue", "red"), c( 3, 4, 2), cex=0.8)
+
+```
+\normalsize
+
+SVM
+```{r}
+carDetailsClassnew <- carDetailsClass_new
+
+HighPriceCode1 = carDetailsClassnew$HighPrice
+levels(HighPriceCode1)
+table(HighPriceCode1)
+table(HighPrice)
+levels(HighPriceCode1)[levels(HighPriceCode1)=="No"]=0
+levels(HighPriceCode1)[levels(HighPriceCode1)=="Yes"]=1
+levels(HighPriceCode1)
+
+HighPriceCode1 <- as.numeric(levels(HighPriceCode1))[HighPriceCode1]
+
+
+carDetailsClassnew <- add_column(carDetailsClassnew, HighPriceCode1, .after = 12)
+
+head(carDetailsClassnew)
+carDetailsClassnew <- carDetailsClassnew[,-14]
+View(carDetailsClassnew)
+
+
+```
+
